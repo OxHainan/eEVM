@@ -4,6 +4,10 @@ project(eevm)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(3RD_PARTY_INTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/internal")
+set(3RD_PARTY_EXPORTED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/exported")
+include_directories(SYSTEM ${3RD_PARTY_INTERNAL_DIR})
+include_directories(SYSTEM ${3RD_PARTY_EXPORTED_DIR})
 
 if(MSVC)
   # Set Windows compiler options.
@@ -21,11 +25,9 @@ else()
   endif()
 endif()
 
-file(GLOB KECCAK_SOURCES
-  3rdparty/keccak/*.c
-)
+file(GLOB KECCAK_SOURCES ${3RD_PARTY_INTERNAL_DIR}/keccak/*.c)
 
-add_subdirectory(3rdparty)
+add_subdirectory(${3RD_PARTY_INTERNAL_DIR})
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Options 
@@ -38,9 +40,9 @@ endif(RECORD_TRACE)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Common variables 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-set(EEVM_INCLUDE_DIRS
-  ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
+set(EEVM_INCLUDE_DIRS 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/test
 )
 
 set(EEVM_CORE_SRCS
@@ -64,12 +66,10 @@ add_library(eevm STATIC
   ${EEVM_CORE_SRCS}
   ${KECCAK_SOURCES}
 )
-target_include_directories(eevm PRIVATE
+target_include_directories(eevm PRIVATE SYSTEM
   ${EEVM_INCLUDE_DIRS}
 )
-target_link_libraries(eevm
-  intx::intx
-)
+target_link_libraries(eevm intx::intx)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -86,7 +86,6 @@ target_include_directories(eevm_tests PRIVATE
 )
 target_compile_options(eevm_tests PRIVATE ${COVERAGE_FLAGS})
 target_link_libraries(eevm_tests eevm ${PLATFORM_SPECIFIC_TEST_LIBS})
-
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Tests
