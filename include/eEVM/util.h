@@ -182,4 +182,12 @@ namespace eevm
     Address generate_address(const Address& sender, uint64_t nonce);
 
     uint64_t to_uint64(const std::string& s);
+
+    inline std::string parse_revert(const std::vector<uint8_t>& bin)
+    {
+        auto src = std::vector<uint8_t>(bin.begin() + 36, bin.end());
+        auto length = static_cast<uint64_t>(eevm::from_big_endian(src.data()));
+        auto res = std::vector<uint8_t>(src.begin() + 32, src.begin() + 32 + length);
+        return {res.data(), res.data() + res.size()};
+    }
 } // namespace eevm

@@ -39,7 +39,7 @@ namespace eevm
         XOR = 0x18, // Bitwise XOR operation
         NOT = 0x19, // Bitwise NOT operation
         BYTE = 0x1a, // Retrieve single byte from word
-
+        SHR = 0x1c,
         // 20s: SHA3
         SHA3 = 0x20, // Compute Keccak-256 hash.
 

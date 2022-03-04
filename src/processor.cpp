@@ -514,6 +514,9 @@ namespace eevm
                 case Opcode::BYTE:
                     byte();
                     break;
+                case Opcode::SHR:
+                    shr();
+                    break;
                 case Opcode::JUMP:
                     jump();
                     break;
@@ -623,6 +626,9 @@ namespace eevm
                     break;
                 case Opcode::STOP:
                     stop();
+                    break;
+                case Opcode::REVERT:
+                    revert();
                     break;
                 default:
                     stringstream err;
@@ -902,6 +908,14 @@ namespace eevm
             ctxt->s.push((val & mask) >> shift);
         }
 
+        void shr()
+        {
+            const auto shift = ctxt->s.pop();
+            const auto value = ctxt->s.pop();
+
+            ctxt->s.push(value >> shift);
+        }
+
         void jump()
         {
             const auto newPc = ctxt->s.pop64();
@@ -1157,6 +1171,16 @@ namespace eevm
             pop_context();
         }
 
+        void revert()
+        {
+            const auto offset = ctxt->s.pop64();
+            const auto size = ctxt->s.pop64();
+            // Fetch output
+            std::vector<uint8_t> output = copy_from_mem(offset, size);
+
+            throw Exception(
+              ET::revert, fmt::format("One of the actions in this transaction was REVERT, {}", parse_revert(output)));
+        }
         void stop()
         {
             // (1) save halt handler

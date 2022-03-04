@@ -19,7 +19,8 @@ namespace eevm
             outOfFunds,
             overflow,
             illegalInstruction,
-            notImplemented
+            notImplemented,
+            revert
         };
         const Type type;
 
