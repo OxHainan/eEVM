@@ -185,9 +185,11 @@ namespace eevm
 
     inline std::string parse_revert(const std::vector<uint8_t>& bin)
     {
+        if (bin.empty())
+            return "";
         auto src = std::vector<uint8_t>(bin.begin() + 36, bin.end());
-        auto length = static_cast<uint64_t>(eevm::from_big_endian(src.data()));
-        auto res = std::vector<uint8_t>(src.begin() + 32, src.begin() + 32 + length);
+        auto offset = static_cast<uint64_t>(eevm::from_big_endian(src.data()));
+        auto res = std::vector<uint8_t>(src.begin() + 32, src.begin() + 32 + offset);
         return {res.data(), res.data() + res.size()};
     }
 } // namespace eevm

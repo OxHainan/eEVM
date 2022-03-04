@@ -1179,7 +1179,8 @@ namespace eevm
             std::vector<uint8_t> output = copy_from_mem(offset, size);
 
             throw Exception(
-              ET::revert, fmt::format("One of the actions in this transaction was REVERT, {}", parse_revert(output)));
+              ET::revert,
+              fmt::format("One of the actions in this transaction was REVERTed, reason: {}", parse_revert(output)));
         }
         void stop()
         {
