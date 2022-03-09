@@ -47,10 +47,12 @@ namespace eevm
     Address generate_address(const Address& sender, uint64_t nonce)
     {
         const auto rlp_encoding = rlp::encode(sender, nonce);
-
-        uint8_t buffer[32u];
-        keccak_256(rlp_encoding.data(), static_cast<unsigned int>(rlp_encoding.size()), buffer);
-
-        return from_big_endian(buffer + 12u, 20u);
+        return from_big_endian(Keccak256(rlp_encoding).data() + 12u, 20u);
     }
+
+    uint256_t to_uint256(const uint8_t* data, size_t size)
+    {
+        return from_big_endian(Keccak256(data, size).data(), 32u);
+    }
+
 } // namespace eevm

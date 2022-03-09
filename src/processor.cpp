@@ -5,6 +5,7 @@
 
 #include "eEVM/bigint.h"
 #include "eEVM/exception.h"
+#include "eEVM/keccak256.h"
 #include "eEVM/opcode.h"
 #include "eEVM/stack.h"
 #include "eEVM/util.h"
@@ -1156,9 +1157,9 @@ namespace eevm
             const auto size = ctxt->s.pop64();
             prepare_mem_access(offset, size);
 
-            uint8_t h[32];
-            keccak_256(ctxt->mem.data() + offset, static_cast<unsigned int>(size), h);
-            ctxt->s.push(from_big_endian(h, sizeof(h)));
+            // uint8_t h[32];
+            // keccak_256(ctxt->mem.data() + offset, static_cast<unsigned int>(size), h);
+            ctxt->s.push(to_uint256(ctxt->mem.data() + offset, static_cast<unsigned int>(size)));
         }
 
         void return_()
