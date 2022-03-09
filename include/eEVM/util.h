@@ -98,7 +98,7 @@ namespace eevm
         return intx::from_string<uint256_t>(s);
     }
 
-    uint256_t to_uint256(const uint8_t* data, size_t size);
+    uint256_t to_uint256(const uint8_t* data, size_t size, bool needHash = true);
 
     inline std::string to_checksum_address(const Address& a)
     {

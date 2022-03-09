@@ -27,15 +27,7 @@ namespace eevm
         skip = std::min(skip, str.size());
         return Keccak256((const uint8_t*)str.data() + skip, str.size() - skip);
     }
-    std::ostream& operator<<(std::ostream& os, const Keccak256& h)
-    {
-        for (unsigned i = 0; i < Keccak256::SIZE; i++)
-        {
-            os << std::hex << static_cast<int>(h.hash[i]);
-        }
 
-        return os;
-    }
     std::string Keccak256::hex_str() const
     {
         return to_hex_string(hash);
@@ -84,21 +76,3 @@ namespace eevm
         hash = Keccak256::from_hex(value);
     }
 }
-
-FMT_BEGIN_NAMESPACE
-template <>
-struct formatter<eevm::Keccak256>
-{
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx)
-    {
-        return ctx.begin();
-    }
-
-    template <typename FormatContext>
-    auto format(const eevm::Keccak256& p, FormatContext& ctx)
-    {
-        return format_to(ctx.out(), "0x{:02x}", fmt::join(p.hash, ""));
-    }
-};
-FMT_END_NAMESPACE

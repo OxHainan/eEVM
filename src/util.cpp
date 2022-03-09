@@ -50,9 +50,11 @@ namespace eevm
         return from_big_endian(Keccak256(rlp_encoding).data() + 12u, 20u);
     }
 
-    uint256_t to_uint256(const uint8_t* data, size_t size)
+    uint256_t to_uint256(const uint8_t* data, size_t size, bool needHash)
     {
-        return from_big_endian(Keccak256(data, size).data(), 32u);
+        if (needHash)
+            return from_big_endian(Keccak256(data, size).data(), 32u);
+        return from_big_endian(data, size);
     }
 
 } // namespace eevm

@@ -3,7 +3,8 @@
 #include "array"
 #include "string"
 #include "vector"
-
+#define FMT_HEADER_ONLY
+#include <fmt/format.h>
 #include <nlohmann/json.hpp>
 namespace eevm
 {
@@ -22,7 +23,6 @@ namespace eevm
 
         static Keccak256 from_skip(const std::string& str, size_t skip);
 
-        friend std::ostream& operator<<(std::ostream& os, const Keccak256& h);
         std::string hex_str() const;
         static Keccak256 from_hex(const std::string& str);
         static Keccak256 from_hex(const std::vector<uint8_t>& data);
@@ -47,3 +47,21 @@ namespace eevm
 
     bool operator==(const Keccak256& lhs, const Keccak256& rhs);
 } // namespace eevm
+
+FMT_BEGIN_NAMESPACE
+template <>
+struct formatter<eevm::Keccak256>
+{
+    template <typename ParseContext>
+    constexpr auto parse(ParseContext& ctx)
+    {
+        return ctx.begin();
+    }
+
+    template <typename FormatContext>
+    auto format(const eevm::Keccak256& p, FormatContext& ctx)
+    {
+        return format_to(ctx.out(), "0x{:02x}", fmt::join(p.hash, ""));
+    }
+};
+FMT_END_NAMESPACE
