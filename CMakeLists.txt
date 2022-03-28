@@ -51,6 +51,7 @@ set(EEVM_CORE_SRCS
   src/stack.cpp
   src/transaction.cpp
   src/util.cpp
+  src/keccak256.cpp
 )
 
 set(EEVM_SIMPLE_SRCS
@@ -71,14 +72,16 @@ target_include_directories(eevm PRIVATE SYSTEM
 )
 target_link_libraries(eevm intx::intx)
 
+add_compile_definitions(DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Executables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 add_executable(eevm_tests
-  tests/main.cpp
-  tests/harness.cpp
-  tests/rlp.cpp
+#   tests/main.cpp
+#   tests/harness.cpp
+#   tests/rlp.cpp
+  tests/keccak256.cpp
   ${EEVM_SIMPLE_SRCS}
 )
 target_include_directories(eevm_tests PRIVATE
