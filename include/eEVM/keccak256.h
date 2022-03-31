@@ -8,44 +8,50 @@
 #include <nlohmann/json.hpp>
 namespace eevm
 {
-    class Keccak256
+class Keccak256
+{
+ public:
+    static constexpr size_t SIZE = 256 / 8;
+    using KeccakHash = std::array<uint8_t, SIZE>;
+
+    Keccak256() = default;
+    Keccak256(const uint8_t* data, size_t size);
+    Keccak256(const std::vector<uint8_t>& vec);
+    Keccak256(const std::string& str);
+    template <size_t N>
+    Keccak256(const std::array<uint8_t, N>& a);
+
+    static Keccak256 from_skip(const std::string& str, size_t skip);
+
+    std::string hex_str() const;
+    static Keccak256 from_hex(const std::string& str);
+    static Keccak256 from_hex(const std::vector<uint8_t>& data);
+
+    const uint8_t* data() const
     {
-      public:
-        static constexpr size_t SIZE = 256 / 8;
-        using KeccakHash = std::array<uint8_t, SIZE>;
+        return hash.data();
+    }
+    size_t size() const
+    {
+        return hash.size();
+    }
 
-        Keccak256() = default;
-        Keccak256(const uint8_t* data, size_t size);
-        Keccak256(const std::vector<uint8_t>& vec);
-        Keccak256(const std::string& str);
-        template <size_t N>
-        Keccak256(const std::array<uint8_t, N>& a);
+    std::vector<uint8_t> HashBytes() const
+    {
+        std::vector<uint8_t> result;
+        std::copy(hash.begin(), hash.end(), result.begin());
+        return result;
+    }
+    KeccakHash hash = {0};
+    friend void to_json(nlohmann::json& j, const Keccak256& hash);
+    friend void from_json(const nlohmann::json& j, Keccak256& hash);
+};
 
-        static Keccak256 from_skip(const std::string& str, size_t skip);
+void to_json(nlohmann::json& j, const Keccak256& hash);
 
-        std::string hex_str() const;
-        static Keccak256 from_hex(const std::string& str);
-        static Keccak256 from_hex(const std::vector<uint8_t>& data);
+void from_json(const nlohmann::json& j, Keccak256& hash);
 
-        const uint8_t* data() const
-        {
-            return hash.data();
-        }
-        size_t size() const
-        {
-            return hash.size();
-        }
-
-        KeccakHash hash = {0};
-        friend void to_json(nlohmann::json& j, const Keccak256& hash);
-        friend void from_json(const nlohmann::json& j, Keccak256& hash);
-    };
-
-    void to_json(nlohmann::json& j, const Keccak256& hash);
-
-    void from_json(const nlohmann::json& j, Keccak256& hash);
-
-    bool operator==(const Keccak256& lhs, const Keccak256& rhs);
+bool operator==(const Keccak256& lhs, const Keccak256& rhs);
 } // namespace eevm
 
 FMT_BEGIN_NAMESPACE
