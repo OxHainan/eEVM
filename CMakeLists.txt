@@ -80,8 +80,7 @@ add_compile_definitions(DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN)
 add_executable(eevm_tests
 #   tests/main.cpp
 #   tests/harness.cpp
-#   tests/rlp.cpp
-  tests/keccak256.cpp
+  tests/rlp.cpp
   ${EEVM_SIMPLE_SRCS}
 )
 target_include_directories(eevm_tests PRIVATE
