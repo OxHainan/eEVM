@@ -50,6 +50,31 @@ namespace eevm
         return from_big_endian(Keccak256(rlp_encoding).data() + 12u, 20u);
     }
 
+    Address generate_address_for_create2(const Address& sender, uint256_t salt, uint256_t init_code)
+    {
+        vector<uint8_t> data;
+        data.emplace_back(static_cast<uint8_t>(strtoul("ff", nullptr, 16))); 
+        uint8_t sender_arr[256];
+        to_big_endian(sender, sender_arr);
+        for (auto i = 0; i < 256; i++)
+        {
+            data.emplace_back(sender_arr[i]);
+        }
+        uint8_t salt_arr[256];
+        to_big_endian(salt, salt_arr);
+        for (auto i = 0; i < 256; i++)
+        {
+            data.emplace_back(salt_arr[i]);
+        }
+        uint8_t init_code_arr[256];
+        to_big_endian(init_code, init_code_arr);
+        for (auto i = 0; i < 256; i++)
+        {
+            data.emplace_back(init_code_arr[i]);
+        }
+        return from_big_endian(Keccak256(data).data() + 12u, 20u);
+    }
+
     uint256_t to_uint256(const uint8_t* data, size_t size, bool needHash)
     {
         if (needHash)

@@ -39,7 +39,10 @@ namespace eevm
         XOR = 0x18, // Bitwise XOR operation
         NOT = 0x19, // Bitwise NOT operation
         BYTE = 0x1a, // Retrieve single byte from word
+        SHL = 0x1b,
         SHR = 0x1c,
+        SAR = 0x1d,
+
         // 20s: SHA3
         SHA3 = 0x20, // Compute Keccak-256 hash.
 
@@ -68,17 +71,22 @@ namespace eevm
                          //  price specified by the originating transaction.)
         EXTCODESIZE = 0x3b, // Get size of an account’s code.
         EXTCODECOPY = 0x3c, // Copy an account’s code to memory
-                            // RETURNDATASIZE = 0x3d, // Get size of output data from the
-                            // previous call from the current environment. RETURNDATACOPY =
-                            // 0x3e, // Copy output data from the previous call to memory.
+        RETURNDATASIZE = 0x3d, // Get size of output data from the
+                               // previous call from the current environment.
+        RETURNDATACOPY = 0x3e, // Copy output data from the previous call to memory.
+        EXTCODEHASH = 0x3f,
+
 
         // 40s: Block Information
         BLOCKHASH = 0x40, // Get the hash of one of the 256 most recent complete blocks.
         COINBASE = 0x41, // Get the block’s beneficiary address
         TIMESTAMP = 0x42, // Get the block’s timestamp.
         NUMBER = 0x43, // Get the block’s number
-        DIFFICULTY = 0x44, // Get the block’s difficulty.
+        PREVRANDAO = 0x44, // Get the block’s difficulty.
         GASLIMIT = 0x45, // Get the block’s gas limit
+        CHAINID = 0x46,
+        SELFBALANCE = 0x47,
+        BASEFEE = 0x48,
 
         // 50s: Stack, Memory, Storage and Flow Operations
         POP = 0x50, // Remove item from stack.
@@ -96,6 +104,7 @@ namespace eevm
                     // reduction for the cost of this instruction.
         JUMPDEST = 0x5b, // Mark a valid destination for jumps. This operation has
                          // no effect on machine state during execution
+        PUSH0 = 0x5f, // Place 0 byte item on stack.
 
         // 60s & 70s: Push Operations
         PUSH1 = 0x60, // Place 1 byte item on stack.
@@ -181,12 +190,13 @@ namespace eevm
         RETURN = 0xf3, // Halt execution returning output data
         DELEGATECALL = 0xf4, // Message-call into this account with an alternative
                              // account’s code, but persisting the current values
-                             // for sender and value. STATICCALL   = 0xfa, // Static
-                             // message-call into an account. Exactly equivalent to
+                             // for sender and value.
+        CREATE2 = 0xf5,
+        STATICCALL   = 0xfa, // Static message-call into an account. Exactly equivalent to
                              // CALL except: The argument µs is replaced with 0.
-        REVERT = 0xfd, // Halt execution reverting state changes but returning data
-                       // and remaining gas INVALID      = 0xfe, // Designated
-                       // invalid instruction
+        REVERT = 0xfd,  // Halt execution reverting state changes but returning data 
+                        // and remaining gas 
+        INVALID = 0xfe, // Designated invalid instruction
         SELFDESTRUCT = 0xff
     };
 } // namespace eevm
