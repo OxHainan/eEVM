@@ -23,6 +23,7 @@ namespace eevm
       public:
         static constexpr std::size_t MAX_SIZE = 1024;
         Stack() = default;
+        uint256_t top();
         uint256_t pop();
         uint64_t pop64();
         void push(const uint256_t& val);

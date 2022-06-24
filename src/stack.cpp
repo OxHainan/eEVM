@@ -15,6 +15,14 @@ namespace eevm
 {
     using ET = Exception::Type;
 
+    uint256_t Stack::top()
+    {
+        if (st.empty())
+            throw Exception(ET::outOfBounds, "Stack out of range");
+            
+        return st.front();
+    }
+
     uint256_t Stack::pop()
     {
         // TODO: don't check size for every single pop, but rather once at the

@@ -20,7 +20,8 @@ namespace eevm
             overflow,
             illegalInstruction,
             notImplemented,
-            revert
+            revert,
+            staticModeViolation
         };
         const Type type;
 

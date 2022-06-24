@@ -19,6 +19,7 @@
 #include <sstream>
 #include <type_traits>
 #include <utility>
+#include <chrono>
 
 using namespace std;
 
@@ -92,6 +93,8 @@ class Context
     ReturnHandler rh;
     HaltHandler hh;
     ExceptionHandler eh;
+    std::vector<uint8_t> return_data;
+    bool in_static_mode;
 
     Context(
         const Address& caller,
@@ -101,7 +104,8 @@ class Context
         Program&& prog,
         ReturnHandler&& rh,
         HaltHandler&& hh,
-        ExceptionHandler&& eh) :
+        ExceptionHandler&& eh,
+        const bool& in_static_mode) :
       as(as),
       acc(as.acc),
       st(as.st),
@@ -111,7 +115,8 @@ class Context
       prog(prog),
       rh(rh),
       hh(hh),
-      eh(eh)
+      eh(eh),
+      in_static_mode(in_static_mode)
     {}
 
     /// increment the pc if it wasn't changed before
@@ -186,7 +191,7 @@ class _Processor
             result.exmsg = ex_.what();
         };
 
-        push_context(caller, callee, move(input), callee.acc.get_code(), call_value, rh, hh, eh);
+        push_context(caller, callee, move(input), callee.acc.get_code(), call_value, rh, hh, eh, false);
 
         // run
         while (ctxt->get_pc() < ctxt->prog.code.size()) {
@@ -210,7 +215,7 @@ class _Processor
         // clean-up
         for (const auto& addr : tx.selfdestruct_list)
             gs.remove(addr);
-
+        
         return result;
     }
 
@@ -223,12 +228,13 @@ class _Processor
         const uint256_t& call_value,
         Context::ReturnHandler&& rh,
         Context::HaltHandler&& hh,
-        Context::ExceptionHandler&& eh)
+        Context::ExceptionHandler&& eh,
+        const bool& is_static_mode)
     {
         if (get_call_depth() >= Consts::MAX_CALL_DEPTH)
             throw Exception(ET::outOfBounds, "Reached max call depth (" + to_string(Consts::MAX_CALL_DEPTH) + ")");
 
-        auto c = make_unique<Context>(caller, as, move(input), call_value, move(prog), move(rh), move(hh), move(eh));
+        auto c = make_unique<Context>(caller, as, move(input), call_value, move(prog), move(rh), move(hh), move(eh), is_static_mode);
         ctxts.emplace_back(move(c));
         ctxt = ctxts.back().get();
     }
@@ -358,6 +364,7 @@ class _Processor
             tr->add(ctxt->get_pc(), op, get_call_depth(), ctxt->s);
 
         switch (op) {
+            case Opcode::PUSH0:
             case Opcode::PUSH1:
             case Opcode::PUSH2:
             case Opcode::PUSH3:
@@ -507,6 +514,9 @@ class _Processor
             case Opcode::SHR:
                 shr();
                 break;
+            case Opcode::SAR:
+                sar();
+                break;
             case Opcode::JUMP:
                 jump();
                 break;
@@ -539,6 +549,15 @@ class _Processor
                 break;
             case Opcode::EXTCODECOPY:
                 extcodecopy();
+                break;
+            case Opcode::RETURNDATASIZE:
+                returndatasize();
+                break;
+            case Opcode::RETURNDATACOPY:
+                returndatacopy();
+                break;
+            case Opcode::EXTCODEHASH:
+                extcodehash();
                 break;
             case Opcode::SLOAD:
                 sload();
@@ -577,11 +596,13 @@ class _Processor
                 selfdestruct();
                 break;
             case Opcode::CREATE:
-                create();
+            case Opcode::CREATE2:
+                create_impl();
                 break;
             case Opcode::CALL:
             case Opcode::CALLCODE:
             case Opcode::DELEGATECALL:
+            case Opcode::STATICCALL:
                 call();
                 break;
             case Opcode::JUMPDEST:
@@ -602,8 +623,8 @@ class _Processor
             case Opcode::TIMESTAMP:
                 timestamp();
                 break;
-            case Opcode::DIFFICULTY:
-                difficulty();
+            case Opcode::PREVRANDAO:
+                prevrandao();
                 break;
             case Opcode::GASLIMIT:
                 gaslimit();
@@ -611,10 +632,20 @@ class _Processor
             case Opcode::GAS:
                 gas();
                 break;
+            case Opcode::CHAINID:
+                chanid();
+                break;
+            case Opcode::SELFBALANCE:
+                selfbalance();
+                break;
+            case Opcode::BASEFEE:
+                basefee();
+                break;
             case Opcode::SHA3:
                 sha3();
                 break;
             case Opcode::STOP:
+            case Opcode::INVALID:
                 stop();
                 break;
             case Opcode::REVERT:
@@ -881,12 +912,34 @@ class _Processor
         ctxt->s.push((val & mask) >> shift);
     }
 
+    void shl()
+    {
+        const auto shift = ctxt->s.pop();
+        const auto value = ctxt->s.pop();
+
+        ctxt->s.push(value << shift);
+    }
+
     void shr()
     {
         const auto shift = ctxt->s.pop();
         const auto value = ctxt->s.pop();
 
         ctxt->s.push(value >> shift);
+    }
+
+    void sar()
+    {
+        const auto& y = ctxt->s.pop();
+        auto x = ctxt->s.pop();
+
+        const bool is_neg = static_cast<int64_t>(x.words_[3]) < 0;  // Inspect the top bit (words are LE).
+        const auto sign_mask = is_neg ? ~uint256_t{} : uint256_t{};
+
+        const auto mask_shift = (y < uint256_t(256)) ? (256 - y.words_[0]) : 0;
+        x = (x >> y) | (sign_mask << mask_shift);
+
+        ctxt->s.push(x);
     }
 
     void jump()
@@ -947,6 +1000,9 @@ class _Processor
 
     void sstore()
     {
+        if (ctxt->in_static_mode)
+            throw Exception(ET::staticModeViolation, "Operation sstore is not allowed in static mode");
+
         const auto k = ctxt->s.pop();
         const auto v = ctxt->s.pop();
         if (!v)
@@ -968,6 +1024,22 @@ class _Processor
     void extcodecopy()
     {
         copy_mem(ctxt->mem, gs.get(pop_addr(ctxt->s)).acc.get_code(), Opcode::STOP);
+    }
+
+    void returndatasize()
+    {
+        ctxt->s.push(uint256_t(ctxt->return_data.size()));
+    }
+
+    void returndatacopy()
+    {
+        copy_mem(ctxt->mem, ctxt->return_data, 0);
+    }
+
+    void extcodehash()
+    {
+        auto code = gs.get(pop_addr(ctxt->s)).acc.get_code();
+        ctxt->s.push(to_uint256(code.data(), code.size()));
     }
 
     void codesize()
@@ -1062,6 +1134,9 @@ class _Processor
 
     void log()
     {
+        if (ctxt->in_static_mode)
+            throw Exception(ET::staticModeViolation, "Operation log is not allowed in static mode");
+
         const uint8_t n = get_op() - LOG0;
         const auto offset = ctxt->s.pop64();
         const auto size = ctxt->s.pop64();
@@ -1083,8 +1158,9 @@ class _Processor
     }
 
     void number()
-    {
-        ctxt->s.push(gs.get_current_block().number);
+    { 
+        throw Exception(ET::notImplemented, "Block number is not implemented.");
+        // ctxt->s.push(gs.get_current_block().number);
     }
 
     void gasprice()
@@ -1094,17 +1170,19 @@ class _Processor
 
     void coinbase()
     {
-        ctxt->s.push(gs.get_current_block().coinbase);
+        throw Exception(ET::notImplemented, "Block coinbase is not implemented.");
+        // ctxt->s.push(gs.get_current_block().coinbase);
     }
 
     void timestamp()
     {
-        ctxt->s.push(gs.get_current_block().timestamp);
+        ctxt->s.push(std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()).time_since_epoch().count());
     }
 
-    void difficulty()
+    void prevrandao()
     {
-        ctxt->s.push(gs.get_current_block().difficulty);
+        throw Exception(ET::notImplemented, "Block prevrandao is not implemented.");
+        //ctxt->s.push(gs.get_current_block().prev_randao);
     }
 
     void gas()
@@ -1116,7 +1194,25 @@ class _Processor
 
     void gaslimit()
     {
-        ctxt->s.push(gs.get_current_block().gas_limit);
+        throw Exception(ET::notImplemented, "Block gaslimit is not implemented.");
+        // ctxt->s.push(gs.get_current_block().gas_limit);
+    }
+
+    void chanid()
+    {
+        throw Exception(ET::notImplemented, "Block chanid is not implemented.");
+        //ctxt->s.push(gs.get_current_block().chain_id);
+    }
+
+    void selfbalance()
+    {
+        ctxt->s.push(ctxt->as.acc.get_balance());
+    }
+
+    void basefee()
+    {
+        throw Exception(ET::notImplemented, "Block basefee is not implemented.");
+        // ctxt->s.push(gs.get_current_block().base_fee);
     }
 
     void sha3()
@@ -1162,21 +1258,39 @@ class _Processor
     }
 
     void selfdestruct()
-    {
+    {        
+        if (ctxt->in_static_mode)
+            throw Exception(ET::staticModeViolation, "Operation selfdestruct is not allowed in static mode");
+
         auto recipient = gs.get(pop_addr(ctxt->s));
         ctxt->acc.pay_to(recipient.acc, ctxt->acc.get_balance());
         tx.selfdestruct_list.push_back(ctxt->acc.get_address());
         stop();
     }
 
-    void create()
+    void create_impl()
     {
+        if (ctxt->in_static_mode)
+            throw Exception(ET::staticModeViolation, "Operation create is not allowed in static mode");
+
+        const auto op = get_op();
+        assert(op == CREATE || op == CREATE2);
+
         const auto contractValue = ctxt->s.pop();
         const auto offset = ctxt->s.pop64();
         const auto size = ctxt->s.pop64();
         auto initCode = copy_from_mem(offset, size);
 
-        const auto newAddress = generate_address(ctxt->acc.get_address(), ctxt->acc.get_nonce());
+        Address newAddress;
+        if (op == Opcode::CREATE)
+        {        
+            newAddress = generate_address(ctxt->acc.get_address(), ctxt->acc.get_nonce());
+        } 
+        else if (op == Opcode::CREATE2)
+        {
+            const auto salt = ctxt->s.pop();
+            newAddress = generate_address_for_create2(ctxt->acc.get_address(), salt, initCode);
+        }
 
         // For contract accounts, the nonce counts the number of
         // contract-creations by this account
@@ -1191,6 +1305,7 @@ class _Processor
 
         auto parentContext = ctxt;
         auto rh = [&newAcc, parentContext](vector<uint8_t> output) {
+            parentContext->return_data = output;
             newAcc.acc.set_code(move(output));
             parentContext->s.push(newAcc.acc.get_address());
         };
@@ -1198,7 +1313,7 @@ class _Processor
         auto eh = [parentContext](const Exception&) { parentContext->s.push(0); };
 
         // create new context for init code execution
-        push_context(ctxt->acc.get_address(), newAcc, {}, std::move(initCode), 0, rh, hh, eh);
+        push_context(ctxt->acc.get_address(), newAcc, {}, std::move(initCode), 0, rh, hh, eh, false);
     }
 
     void call()
@@ -1206,7 +1321,7 @@ class _Processor
         const auto op = get_op();
         ctxt->s.pop(); // gas limit not used
         const auto addr = pop_addr(ctxt->s);
-        const auto value = op == DELEGATECALL ? 0 : ctxt->s.pop64();
+        const auto value = (op == DELEGATECALL || op == STATICCALL) ? 0 : ctxt->s.pop64();
         const auto offIn = ctxt->s.pop64();
         const auto sizeIn = ctxt->s.pop64();
         const auto offOut = ctxt->s.pop64();
@@ -1229,6 +1344,7 @@ class _Processor
 
         auto parentContext = ctxt;
         auto rh = [offOut, sizeOut, parentContext](const vector<uint8_t>& output) {
+            parentContext->return_data = output;
             copy_mem_raw(offOut, 0, sizeOut, parentContext->mem, output);
             parentContext->s.push(1);
         };
@@ -1236,14 +1352,16 @@ class _Processor
         auto he = [parentContext](const Exception&) { parentContext->s.push(0); };
 
         switch (op) {
+            case Opcode::STATICCALL:
+                push_context(ctxt->acc.get_address(), callee, move(input), callee.acc.get_code(), value, rh, hh, he, true);
             case Opcode::CALL:
-                push_context(ctxt->acc.get_address(), callee, move(input), callee.acc.get_code(), value, rh, hh, he);
+                push_context(ctxt->acc.get_address(), callee, move(input), callee.acc.get_code(), value, rh, hh, he, false);
                 break;
             case Opcode::CALLCODE:
-                push_context(ctxt->acc.get_address(), ctxt->as, move(input), callee.acc.get_code(), value, rh, hh, he);
+                push_context(ctxt->acc.get_address(), ctxt->as, move(input), callee.acc.get_code(), value, rh, hh, he, false);
                 break;
             case Opcode::DELEGATECALL:
-                push_context(ctxt->caller, ctxt->as, move(input), callee.acc.get_code(), ctxt->call_value, rh, hh, he);
+                push_context(ctxt->caller, ctxt->as, move(input), callee.acc.get_code(), ctxt->call_value, rh, hh, he, false);
                 break;
             default:
                 throw UnexpectedState("Unknown call opcode.");
