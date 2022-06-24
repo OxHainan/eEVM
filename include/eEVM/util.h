@@ -123,7 +123,7 @@ inline bool is_checksum_address(const std::string& s)
 }
 
 Address generate_address(const Address& sender, uint64_t nonce);
-Address generate_address_for_create2(const Address& sender, uint256_t salt, uint256_t initcode);
+Address generate_address_for_create2(const Address& sender, const uint256_t& salt, const std::vector<uint8_t>& initcode);
 
 uint64_t to_uint64(const std::string& s);
 

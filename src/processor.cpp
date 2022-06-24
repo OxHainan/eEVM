@@ -1282,7 +1282,7 @@ class _Processor
         else if (op == Opcode::CREATE2)
         {
             const auto salt = ctxt->s.pop();
-            newAddress = generate_address_for_create2(ctxt->acc.get_address(), salt, contractValue);
+            newAddress = generate_address_for_create2(ctxt->acc.get_address(), salt, initCode);
         }
 
         // For contract accounts, the nonce counts the number of
