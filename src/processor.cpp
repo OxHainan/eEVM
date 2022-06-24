@@ -19,6 +19,7 @@
 #include <sstream>
 #include <type_traits>
 #include <utility>
+#include <chrono>
 
 using namespace std;
 
@@ -1157,8 +1158,9 @@ class _Processor
     }
 
     void number()
-    {
-        ctxt->s.push(gs.get_current_block().number);
+    { 
+        throw Exception(ET::notImplemented, "Block number is not implemented.");
+        // ctxt->s.push(gs.get_current_block().number);
     }
 
     void gasprice()
@@ -1168,17 +1170,19 @@ class _Processor
 
     void coinbase()
     {
-        ctxt->s.push(gs.get_current_block().coinbase);
+        throw Exception(ET::notImplemented, "Block coinbase is not implemented.");
+        // ctxt->s.push(gs.get_current_block().coinbase);
     }
 
     void timestamp()
     {
-        ctxt->s.push(gs.get_current_block().timestamp);
+        ctxt->s.push(std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()).time_since_epoch().count());
     }
 
     void prevrandao()
     {
-        ctxt->s.push(gs.get_current_block().prev_randao);
+        throw Exception(ET::notImplemented, "Block prevrandao is not implemented.");
+        //ctxt->s.push(gs.get_current_block().prev_randao);
     }
 
     void gas()
@@ -1190,12 +1194,14 @@ class _Processor
 
     void gaslimit()
     {
-        ctxt->s.push(gs.get_current_block().gas_limit);
+        throw Exception(ET::notImplemented, "Block gaslimit is not implemented.");
+        // ctxt->s.push(gs.get_current_block().gas_limit);
     }
 
     void chanid()
     {
-        ctxt->s.push(gs.get_current_block().chain_id);
+        throw Exception(ET::notImplemented, "Block chanid is not implemented.");
+        //ctxt->s.push(gs.get_current_block().chain_id);
     }
 
     void selfbalance()
@@ -1205,7 +1211,8 @@ class _Processor
 
     void basefee()
     {
-        ctxt->s.push(gs.get_current_block().base_fee);
+        throw Exception(ET::notImplemented, "Block basefee is not implemented.");
+        // ctxt->s.push(gs.get_current_block().base_fee);
     }
 
     void sha3()
