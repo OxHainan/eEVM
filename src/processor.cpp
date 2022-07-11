@@ -511,6 +511,9 @@ class _Processor
             case Opcode::BYTE:
                 byte();
                 break;
+            case Opcode::SHL:
+                shl();
+                break;
             case Opcode::SHR:
                 shr();
                 break;
