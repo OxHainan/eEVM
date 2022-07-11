@@ -936,10 +936,10 @@ class _Processor
         const auto& y = ctxt->s.pop();
         auto x = ctxt->s.pop();
 
-        const bool is_neg = static_cast<int64_t>(x.words_[3]) < 0;  // Inspect the top bit (words are LE).
+        const bool is_neg = static_cast<int64_t>(x[3]) < 0;  // Inspect the top bit (words are LE).
         const auto sign_mask = is_neg ? ~uint256_t{} : uint256_t{};
 
-        const auto mask_shift = (y < uint256_t(256)) ? (256 - y.words_[0]) : 0;
+        const auto mask_shift = (y < uint256_t(256)) ? (256 - y[0]) : 0;
         x = (x >> y) | (sign_mask << mask_shift);
 
         ctxt->s.push(x);
