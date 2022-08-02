@@ -38,7 +38,7 @@ class Keccak256
 
     std::vector<uint8_t> HashBytes() const
     {
-        std::vector<uint8_t> result;
+        std::vector<uint8_t> result(0x20);
         std::copy(hash.begin(), hash.end(), result.begin());
         return result;
     }
